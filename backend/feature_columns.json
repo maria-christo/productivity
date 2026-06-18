@@ -1,0 +1,15 @@
+[
+    "age",
+    "daily_screen_time",
+    "social_media_hours",
+    "study_hours",
+    "sleep_hours",
+    "notifications_per_day",
+    "focus_score",
+    "addiction_level",
+    "screen_social_ratio",
+    "study_sleep_balance",
+    "notification_pressure",
+    "focus_study_interaction",
+    "digital_distraction_score"
+]

@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.env
+
+# Node / React
+node_modules/
+dist/
+.env.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Optional large files
+*.log
