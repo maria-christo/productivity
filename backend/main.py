@@ -4,6 +4,9 @@ from pydantic import BaseModel
 import pandas as pd
 import joblib
 import json
+import requests
+from pydantic import BaseModel, Field, model_validator
+from typing import Literal
 
 
 # Load model
@@ -24,9 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-from pydantic import BaseModel, Field, model_validator
-from typing import Literal
 
 
 class UserInput(BaseModel):
@@ -133,6 +133,64 @@ def productivity_coach(user_data, score, category):
 
     return recommendations
 
+def llm_productivity_coach(user_data, predicted_score, category, rule_recommendations):
+    prompt = f"""
+You are an AI productivity coach.
+
+A machine learning model predicted the user's productivity.
+
+User details:
+- Age: {user_data["age"]}
+- Daily screen time: {user_data["daily_screen_time"]} hours
+- Social media hours: {user_data["social_media_hours"]} hours
+- Study/work hours: {user_data["study_hours"]} hours
+- Sleep hours: {user_data["sleep_hours"]} hours
+- Notifications per day: {user_data["notifications_per_day"]}
+- Focus score: {user_data["focus_score"]}
+- Addiction level: {user_data["addiction_level"]}
+
+ML prediction:
+- Productivity score: {round(predicted_score, 2)}
+- Productivity category: {category}
+
+Rule-based recommendations:
+{rule_recommendations}
+
+Write a short, supportive productivity analysis.
+Give:
+1. A simple explanation of why the score may be low/medium/high
+2. 3 practical recommendations
+3. One motivational closing sentence
+
+Keep it student-friendly and concise.
+"""
+
+    try:
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": "llama3.2:3b",
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=180
+        )
+
+        response.raise_for_status()
+
+        result = response.json()
+        return result.get("response", "LLM response was not available.")
+
+    except requests.exceptions.RequestException:
+        return (
+            "LLM coach is currently unavailable. "
+            "Please make sure Ollama is running locally. "
+            "Basic recommendations have still been generated."
+        )
+
+    result = response.json()
+    return result["response"]
+
 
 @app.get("/")
 def home():
@@ -143,7 +201,7 @@ def home():
 
 @app.post("/predict")
 def predict_productivity(user_input: UserInput):
-    user_data = user_input.dict()
+    user_data = user_input.model_dump()
 
     user_df = prepare_user_input(user_data)
 
@@ -158,8 +216,16 @@ def predict_productivity(user_input: UserInput):
         category
     )
 
+    llm_advice = llm_productivity_coach(
+        user_data,
+        prediction,
+        category,
+        recommendations
+    )
+
     return {
         "predicted_productivity_score": round(prediction, 2),
         "productivity_category": category,
-        "recommendations": recommendations
+        "recommendations": recommendations,
+        "llm_advice": llm_advice
     }
