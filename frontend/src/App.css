@@ -19,7 +19,7 @@ body {
 }
 
 .hero {
-  max-width: 1180px;
+  max-width: 1400px;
   margin: 0 auto 28px;
   display: flex;
   justify-content: space-between;
@@ -78,7 +78,7 @@ body {
 }
 
 .layout {
-  max-width: 1180px;
+  max-width: 1400px;
   margin: auto;
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
@@ -95,7 +95,7 @@ body {
 }
 
 .form-panel {
-  padding: 28px;
+  padding: 34px;
 }
 
 .panel-header h2 {
@@ -212,7 +212,7 @@ button:disabled {
 
 .result-panel {
   min-height: 620px;
-  padding: 28px;
+  padding: 34px;
   position: sticky;
   top: 24px;
 }
