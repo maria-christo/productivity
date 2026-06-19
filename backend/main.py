@@ -135,7 +135,7 @@ def productivity_coach(user_data, score, category):
 
 def llm_productivity_coach(user_data, predicted_score, category, rule_recommendations):
     prompt = f"""
-You are an AI productivity coach.
+You are an AI productivity coach for students.
 
 A machine learning model predicted the user's productivity.
 
@@ -156,13 +156,30 @@ ML prediction:
 Rule-based recommendations:
 {rule_recommendations}
 
-Write a short, supportive productivity analysis.
-Give:
-1. A simple explanation of why the score may be low/medium/high
-2. 3 practical recommendations
-3. One motivational closing sentence
+Write the response in this exact structure:
 
-Keep it student-friendly and concise.
+Productivity Analysis:
+Explain in 2 short sentences why the user received this productivity score.
+
+Key Factors:
+1. Mention one positive factor.
+2. Mention one negative factor.
+3. Mention one habit that can be improved.
+
+Action Plan:
+1. Give one practical action for screen/social media control.
+2. Give one practical action for focus or study/work.
+3. Give one practical action for sleep or routine.
+
+Motivation:
+End with one short encouraging sentence.
+
+Rules:
+- Keep the tone supportive and student-friendly.
+- Do not call the user "kiddo".
+- Do not use markdown symbols like ** or #.
+- Do not write one long paragraph.
+- Keep the whole answer under 180 words.
 """
 
     try:

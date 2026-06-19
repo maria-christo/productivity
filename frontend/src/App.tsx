@@ -50,6 +50,12 @@ function App() {
     });
   };
 
+  const getCategoryClass = (category: string) => {
+    if (category.includes("High")) return "high";
+    if (category.includes("Medium")) return "medium";
+    return "low";
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -57,14 +63,41 @@ function App() {
     setError("");
     setResult(null);
 
+    const age = Number(formData.age);
+    const dailyScreenTime = Number(formData.daily_screen_time);
+    const socialMediaHours = Number(formData.social_media_hours);
+    const studyHours = Number(formData.study_hours);
+    const sleepHours = Number(formData.sleep_hours);
+    const focusScore = Number(formData.focus_score);
+
+    if (age < 10 || age > 80) {
+      setError("Age must be between 10 and 80.");
+      setLoading(false);
+      return;
+    }
+
+    if (socialMediaHours > dailyScreenTime) {
+      setError("Social media hours cannot be greater than total screen time.");
+      setLoading(false);
+      return;
+    }
+
+    if (sleepHours + studyHours + socialMediaHours > 24) {
+      setError(
+        "Sleep hours, study/work hours, and social media hours together cannot exceed 24 hours."
+      );
+      setLoading(false);
+      return;
+    }
+
     const payload = {
-      age: Number(formData.age),
-      daily_screen_time: Number(formData.daily_screen_time),
-      social_media_hours: Number(formData.social_media_hours),
-      study_hours: Number(formData.study_hours),
-      sleep_hours: Number(formData.sleep_hours),
+      age: age,
+      daily_screen_time: dailyScreenTime,
+      social_media_hours: socialMediaHours,
+      study_hours: studyHours,
+      sleep_hours: sleepHours,
       notifications_per_day: notificationMapping[formData.notification_level],
-      focus_score: Number(formData.focus_score),
+      focus_score: focusScore,
       addiction_level: formData.addiction_level,
     };
 
@@ -78,29 +111,62 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error("Prediction failed.");
+        const errorData = await response.json();
+
+        let message = "Prediction failed. Please check your inputs.";
+
+        if (Array.isArray(errorData.detail)) {
+          message = errorData.detail
+            .map((err: { msg?: string }) => err.msg)
+            .join(" ");
+        }
+
+        throw new Error(message);
       }
 
       const data: PredictionResult = await response.json();
       setResult(data);
     } catch (err) {
-      setError("Could not connect to backend. Make sure FastAPI is running.");
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Could not connect to backend. Make sure FastAPI is running.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const scorePercent = result
+    ? Math.max(0, Math.min(100, result.predicted_productivity_score))
+    : 0;
+
   return (
-    <div className="page">
-      <div className="container">
-        <h1>AI Productivity Reality Check</h1>
+    <main className="app">
+      <section className="hero">
+        <div>
+          <p className="eyebrow">AI + ML Productivity Coach</p>
+          <h1>Productivity Reality Check</h1>
+          <p className="hero-text">
+            Discover how your screen habits, focus, sleep, and study routine
+            affect your productivity.
+          </p>
+        </div>
 
-        <p className="subtitle">
-          Answer a few simple lifestyle questions. The system will estimate your
-          productivity and suggest improvements.
-        </p>
+        <div className="hero-card">
+          <span>Final Model</span>
+          <strong>Optuna XGBoost</strong>
+          <p>ML prediction + Ollama AI coach</p>
+        </div>
+      </section>
 
-        <form onSubmit={handleSubmit} className="form">
+      <section className="layout">
+        <form onSubmit={handleSubmit} className="panel form-panel">
+          <div className="panel-header">
+            <h2>Your Lifestyle Inputs</h2>
+            <p>Use sliders and simple choices. No technical values needed.</p>
+          </div>
+
           <div className="field">
             <label>Age</label>
             <input
@@ -114,12 +180,10 @@ function App() {
           </div>
 
           <div className="field">
-            <label>
-              Daily Screen Time: <strong>{formData.daily_screen_time} hours</strong>
-            </label>
-            <p className="hint">
-              Total time spent using phone, laptop, tablet, or TV in a day.
-            </p>
+            <div className="label-row">
+              <label>Daily Screen Time</label>
+              <span>{formData.daily_screen_time} hrs</span>
+            </div>
             <input
               type="range"
               name="daily_screen_time"
@@ -129,34 +193,31 @@ function App() {
               value={formData.daily_screen_time}
               onChange={handleChange}
             />
+            <p className="hint">Phone, laptop, tablet, TV, and other screens.</p>
           </div>
 
           <div className="field">
-            <label>
-              Social Media Usage:{" "}
-              <strong>{formData.social_media_hours} hours</strong>
-            </label>
-            <p className="hint">
-              Time spent on Instagram, YouTube, WhatsApp, reels, shorts, etc.
-            </p>
+            <div className="label-row">
+              <label>Social Media Usage</label>
+              <span>{formData.social_media_hours} hrs</span>
+            </div>
             <input
               type="range"
               name="social_media_hours"
               min="0"
-              max="12"
+              max={formData.daily_screen_time}
               step="0.5"
               value={formData.social_media_hours}
               onChange={handleChange}
             />
+            <p className="hint">Reels, shorts, Instagram, YouTube, WhatsApp, etc.</p>
           </div>
 
           <div className="field">
-            <label>
-              Study / Work Hours: <strong>{formData.study_hours} hours</strong>
-            </label>
-            <p className="hint">
-              Approximate focused study or productive work time per day.
-            </p>
+            <div className="label-row">
+              <label>Study / Work Hours</label>
+              <span>{formData.study_hours} hrs</span>
+            </div>
             <input
               type="range"
               name="study_hours"
@@ -169,10 +230,10 @@ function App() {
           </div>
 
           <div className="field">
-            <label>
-              Sleep Hours: <strong>{formData.sleep_hours} hours</strong>
-            </label>
-            <p className="hint">Average sleep duration per day.</p>
+            <div className="label-row">
+              <label>Sleep Hours</label>
+              <span>{formData.sleep_hours} hrs</span>
+            </div>
             <input
               type="range"
               name="sleep_hours"
@@ -184,29 +245,39 @@ function App() {
             />
           </div>
 
-          <div className="field">
-            <label>Notifications Per Day</label>
-            <p className="hint">
-              Choose an approximate level. The app converts this to a number.
-            </p>
-            <select
-              name="notification_level"
-              value={formData.notification_level}
-              onChange={handleChange}
-            >
-              <option value="Low">Low: 0–30 notifications</option>
-              <option value="Medium">Medium: 31–100 notifications</option>
-              <option value="High">High: 100+ notifications</option>
-            </select>
+          <div className="two-columns">
+            <div className="field">
+              <label>Notifications</label>
+              <select
+                name="notification_level"
+                value={formData.notification_level}
+                onChange={handleChange}
+              >
+                <option value="Low">Low: 0–30/day</option>
+                <option value="Medium">Medium: 31–100/day</option>
+                <option value="High">High: 100+/day</option>
+              </select>
+            </div>
+
+            <div className="field">
+              <label>Social Media Dependency</label>
+              <select
+                name="addiction_level"
+                value={formData.addiction_level}
+                onChange={handleChange}
+              >
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </div>
           </div>
 
           <div className="field">
-            <label>
-              Focus Level: <strong>{formData.focus_score}/100</strong>
-            </label>
-            <p className="hint">
-              0 means very distracted, 100 means highly focused.
-            </p>
+            <div className="label-row">
+              <label>Focus Level</label>
+              <span>{formData.focus_score}/100</span>
+            </div>
             <input
               type="range"
               name="focus_score"
@@ -216,61 +287,78 @@ function App() {
               value={formData.focus_score}
               onChange={handleChange}
             />
+            <p className="hint">0 = distracted, 100 = highly focused.</p>
           </div>
 
-          <div className="field">
-            <label>Social Media Dependency</label>
-            <p className="hint">
-              How difficult is it for you to stay away from social media?
-            </p>
-            <select
-              name="addiction_level"
-              value={formData.addiction_level}
-              onChange={handleChange}
-            >
-              <option value="Low">Low: I can avoid it easily</option>
-              <option value="Medium">Medium: I check it often but can control it</option>
-              <option value="High">High: I find it difficult to stop checking</option>
-            </select>
-          </div>
+          {error && <p className="error">{error}</p>}
 
           <button type="submit" disabled={loading}>
-            {loading ? "Predicting..." : "Check My Productivity"}
+            {loading ? "Analyzing..." : "Analyze My Productivity"}
           </button>
         </form>
 
-        {error && <p className="error">{error}</p>}
-
-        {result && (
-          <div className="result">
-            <h2>Prediction Result</h2>
-
-            <div className="score-card">
-              <p>Productivity Score</p>
-              <h3>{result.predicted_productivity_score}</h3>
+        <aside className="panel result-panel">
+          {!result && !loading && (
+            <div className="empty-state">
+              <div className="pulse-circle">AI</div>
+              <h2>Your result will appear here</h2>
+              <p>
+                Submit your lifestyle details to get a productivity score,
+                category, recommendations, and AI coach advice.
+              </p>
             </div>
+          )}
 
-            <p>
-              <strong>Category:</strong> {result.productivity_category}
-            </p>
+          {loading && (
+            <div className="loading-state">
+              <div className="spinner"></div>
+              <h2>Analyzing your routine...</h2>
+              <p>The ML model and AI coach are preparing your feedback.</p>
+            </div>
+          )}
 
-            <h3>Recommendations</h3>
-            <ul>
-              {result.recommendations.map((recommendation, index) => (
-                <li key={index}>{recommendation}</li>
-              ))}
-            </ul>
+          {result && (
+            <div className="result-content">
+              <p className="eyebrow">Prediction Result</p>
 
-            {result.llm_advice && (
-              <div className="llm-box">
-                <h3>AI Coach Advice</h3>
-                <p>{result.llm_advice}</p>
+              <div className="score-box">
+                <div>
+                  <span>Productivity Score</span>
+                  <h2>{result.predicted_productivity_score}</h2>
+                </div>
+
+                <div className={`badge ${getCategoryClass(result.productivity_category)}`}>
+                  {result.productivity_category}
+                </div>
               </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+
+              <div className="meter">
+                <div
+                  className="meter-fill"
+                  style={{ width: `${scorePercent}%` }}
+                ></div>
+              </div>
+
+              <div className="recommendation-box">
+                <h3>Recommended Actions</h3>
+                <ul>
+                  {result.recommendations.map((recommendation, index) => (
+                    <li key={index}>{recommendation}</li>
+                  ))}
+                </ul>
+              </div>
+
+              {result.llm_advice && (
+                <div className="llm-box">
+                  <h3>AI Coach Advice</h3>
+                  <p>{result.llm_advice}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </aside>
+      </section>
+    </main>
   );
 }
 
